@@ -1,0 +1,9 @@
+*.o
+*.d
+*.asm
+.vscode/
+-*
+Image*
+linux.img
+orevisor*
+sampleOS*
