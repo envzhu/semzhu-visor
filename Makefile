@@ -1,6 +1,6 @@
 # configure
 ADDNAME = llvm-
-TARGET = orevisor
+TARGET = semzhu-visor
 LINUX-IMG = ./Image-hvc
 LINUX-SYM = ./vmlinux-hvc
 
@@ -21,13 +21,13 @@ RM = rm
 # souces
 OBJS = startup.o init.o vector.o asm_func.o interrupt.o uart.o print.o
 OBJS += lib.o log.o malloc.o
-OBJS += phys_cpu_setting.o spinlock.o hyp_mmu.o hyp_timer.o pmu.o sd.o smp_mbox.o
+OBJS += phys_cpu_setting.o guest_vm.o spinlock.o hyp_mmu.o hyp_timer.o pmu.o sd.o smp_mbox.o
 OBJS += vcpu.o vm.o hyp_call.o pcpu.o schedule.o fcfs_schedule.o rr_schedule.o no_schedule.o
 OBJS += vtimer.o virt_mmio.o virq.o virt_bcm2836_mailbox.o virt_bcm2835_mailbox.o virt_bcm2835_cprman.o virt_gpio.o
 OBJS += hyp_security.o hyp_security_fast.o
 
 # guest os
-IMG_OBJS = sampleOS-img.o linux-img.o kozos-img.o bcm2837-rpi-3-b-img.o initrd-img.o
+GUEST_OBJS = sampleOS-img.o linux-img.o kozos-img.o bcm2837-rpi-3-b-img.o initrd-img.o
 
 
 DEPS = $(OBJS:%.o=%.d)
@@ -47,7 +47,7 @@ all: $(TARGET).bin
 -include $(DEPS)
 
 $(TARGET).elf: $(LDSCRIPT) $(OBJS) Makefile
-	$(LD) $(LFLAGS) -T $(LDSCRIPT) $(OBJS) $(IMG_OBJS)  -o $@ 
+	$(LD) $(LFLAGS) -T $(LDSCRIPT) $(OBJS) $(GUEST_OBJS)  -o $@ 
 	cp $(TARGET).elf $(TARGET)
 	$(OBJCOPY) $(TARGET) -strip-all
 	$(OBJDUMP) -d -r $(TARGET).elf > $(TARGET).asm
@@ -90,15 +90,12 @@ line:
 run: $(TARGET).bin
 	$(AARCH64-QEMU) \
 	-m 1024 -M raspi3 -kernel $(TARGET).bin \
-	-dtb bcm2837-rpi-3-b.dtb \
 	-serial pty -serial stdio \
-	-accel tcg,thread=single -smp 4 -icount 1 \
-	-drive file=../ext4/hello.txt,if=sd,format=raw
+	-accel tcg,thread=single -smp 4 -icount 1
 
 qemu: $(TARGET).bin
 	$(AARCH64-QEMU) \
 	-m 1024 -M raspi3 -kernel $(TARGET).bin \
-	-dtb bcm2837-rpi-3-b.dtb \
 	-serial stdio -serial pty \
 	-gdb tcp::12345 -S \
 	-icount 1 \
