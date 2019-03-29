@@ -6,7 +6,7 @@
 
 // GPIO Peripheral
 #define GPIO_BASE	(0x00200000)
-#define GPIO_REG(x) *((volatile uint32_t *)PHY_PERI_ADDR(GPIO_BASE+x))
+#define GPIO_REG(x) *((volatile uint32_t *)BCM2835_PERI_ADDR(GPIO_BASE+x))
 
 #define GPFSEL0		GPIO_REG(0x00)
 #define GPFSEL1		GPIO_REG(0x04)

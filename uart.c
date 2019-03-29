@@ -3,7 +3,7 @@
 #include "hardware_def.h"
 
 #define AUX_BASE   (0x00215000)
-#define AUX_REG(x) *((volatile uint32_t *)PHY_PERI_ADDR(AUX_BASE+x))
+#define AUX_REG(x) *((volatile uint32_t *)BCM2835_PERI_ADDR(AUX_BASE+x))
 #define AUX_IRQ		AUX_REG(0x00)
 #define AUX_ENABLE  AUX_REG(0x04)
 
