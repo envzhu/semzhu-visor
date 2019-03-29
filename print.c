@@ -51,7 +51,7 @@ int dump(char *buf, long size)
 /* convert number to string */
 static int num2str(char *dst, uint64_t num, char type, int prefix,int column)
 {
-  char buf[20];
+  char buf[30];
   char *p;
 
   p = buf + sizeof(buf) - 1;
@@ -66,28 +66,35 @@ static int num2str(char *dst, uint64_t num, char type, int prefix,int column)
         *(p--) = "0123456789"[num % 10];
         num /= 10;
         if (column) column--;
+        if(p<buf)
+          hyp_panic("The number which you want to print is too big to print.\n");
       }
       break;
     case 'x':
-    while (num || column) {
-      *(p--) = "0123456789abcdef"[num & 0xf];
-      num >>= 4;
-      if (column) column--;
-    }
-    if(prefix){
-      *(p--) = 'x';
-      *(p--) = '0';
-    }
-    break;
+      while (num || column) {
+        *(p--) = "0123456789abcdef"[num & 0xf];
+        num >>= 4;
+        if (column) column--;
+        if(p<buf)
+            hyp_panic("The number which you want to print is too big to print.\n");
+
+      }
+      if(prefix){
+        *(p--) = 'x';
+        *(p--) = '0';
+      }
+      break;
     case 'X':
-    while (num || column) {
-      *(p--) = "0123456789ABCDEF"[num & 0xf];
-      num >>= 4;
-      if (column) column--;
-    }
-    break;
+      while (num || column) {
+        *(p--) = "0123456789ABCDEF"[num & 0xf];
+        num >>= 4;
+        if (column) column--;
+        if(p<buf)
+            hyp_panic("The number which you want to print is too big to print.\n");
+      }
+      break;
     default:
-    break;
+      break;
   }
 
   strcpy(dst, p+1);
