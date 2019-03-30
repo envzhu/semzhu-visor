@@ -10,9 +10,9 @@
 #include "virt_mmio.h"
 #include "schedule.h"
 
-#define VM_NUM 10
+#define VM_MAX_NUM 10
 
-vm_t vms[VM_NUM];
+vm_t vms[VM_MAX_NUM];
 #include "virq.h"
 void vm_create(char *name, uint8_t vcpu_num, scheduler_t *scheduler, int priority, 
             phys_addr_t entry_addr, mmp_t *mmp, int mmp_size, 
@@ -27,11 +27,11 @@ void vm_create(char *name, uint8_t vcpu_num, scheduler_t *scheduler, int priorit
   
   /* find free a vm_t block*/
   int i;
-  for(i=0; i<VM_NUM; i++){
+  for(i=0; i<VM_MAX_NUM; i++){
     if(vms[i].free == 0)break;
   }
   /*if tehre isn't a free vm_t block */
-  if(i == VM_NUM)
+  if(i == VM_MAX_NUM)
     hyp_panic("Not found a free vm_t block\n");
 
   vm_t *vm = &vms[i]; 
@@ -83,7 +83,7 @@ void vm_create(char *name, uint8_t vcpu_num, scheduler_t *scheduler, int priorit
   virt_device_intr_set(vm);
 
   log_info("generated VM name :%s,  vttbr : %#x\n", vm->name, vm->vttbr);
-  /* TODO : マルチコアをサポートする */
+  /* TODO : Support multi core */
   vm->vcpu[0] =  vcpu_create(vm, 0, vm->vttbr, vm->hyp_msg, (phys_addr_t)entry_addr);
   
   /* Add to ready que */
@@ -94,7 +94,7 @@ void vm_force_shutdown(vm_t *vm){
   int i;
 
   if(vm == NULL)
-    log_error("Cannot shutdown NULL vm\n");
+    hyp_panic("Cannot shutdown NULL VM\n");
   
   log_info("Shutdown vm:%s\n", vm->name);
 
