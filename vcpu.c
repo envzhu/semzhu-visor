@@ -11,20 +11,15 @@
 #include "virt_mmio.h"
 #include "hyp_security.h"
 
+const char *vcpu_state_msg[]={
+  "Initialized",
+  "Runnning",
+  "Ready",
+  "Sleeping"
+};
 
 static vcpu_t vcpus[VCPU_NUM];
 static uint32_t num_vcpu = 0;
-
-/*
-static void _vcpu_init(vcpu_t *vcpu, uint32_t id, uint8_t vid, vm_t *vm){
-    vcpu->id = id;
-    vcpu->cpu_id = vid;
-    vcpu->sysreg.pc = 0;
-    vcpu->vm = vm;
-
-
-    vcpu_reset(vcpu);
-}*/
 
 static vcpu_t *vcpu_alloc(void){
   if(num_vcpu >= VCPU_NUM)
@@ -80,8 +75,14 @@ void vcpu_reset(vcpu_t *vcpu){
 }
 
 void vcpu_ready(vcpu_t *vcpu){
+
+  if(vcpu->state == VCPU_STATE_READY)
+    hyp_panic("You cannot make ready a VCPU which is already ready."
+        " vm:%s, vcpu id:%d\n",
+        vcpu->vm->name, vcpu->vcpu_id);
+
   if(vcpu->state == VCPU_STATE_RUN)
-    hyp_panic("! this is already start !");
+    vcpu->phys_cpu->current_vcpu = NULL;
 
   vcpu->state = VCPU_STATE_READY;
   
@@ -89,16 +90,19 @@ void vcpu_ready(vcpu_t *vcpu){
 }
 
 void vcpu_active(vcpu_t *vcpu, pcpu_t *phys_cpu){
-  /*
-  if(phys_cpu->current_vcpu != NULL)
-      hyp_panic("There is already executing vcpu!");
-    */
-  if(vcpu == NULL)
-    hyp_panic("! Cannot active NULL VCPU\n");
-    
-  if(vcpu->state == VCPU_STATE_RUN)
-    hyp_panic("! This vcpu has already run !");
 
+  if(phys_cpu->current_vcpu != NULL
+      && phys_cpu->current_vcpu != vcpu)
+    hyp_panic("There is another executing vcpu!");
+
+  if(vcpu == NULL)
+    hyp_panic("You cannot active a NULL VCPU\n");
+    
+  if(vcpu->state == VCPU_STATE_RUN){
+    log_warn("You shouldn't active a VCPU which has already run. vm : %s, vcpu id: \n",
+        vcpu->vm->name, vcpu->vcpu_id);
+    return;
+  }
   vcpu->phys_cpu = phys_cpu;
   phys_cpu->current_vcpu = vcpu;
 
@@ -120,53 +124,22 @@ void vcpu_off(vcpu_t *vcpu){
     vcpu->state = VCPU_STATE_INIT;
 }
 
-/*
-void vcpu_stop(void){
-    exec_cpu = NULL;
-}
-
-void vcpu_save_state(vcpu_t *vcpu){
-    if(vcpu==NULL){
-        tv_abort("! Cannot save NULL VCPU\n");
-        return;
-    }
-/*
-    for(HW i=0;i<14;i++){
-        vcpu->reg[i] = _sp->reg[i];
-    }
-
-    virtual_gic_save_state(vcpu->vm->vgic, vcpu->vid);*/
-/*}
-
-vcpu_t *vcpu_find_by_id(uint32_t id){
-    return &(vcpus[id]);
-}
-
-vcpu_t *vcpu_get_last( void )
-{
-    return last_cpu;
-}
-
-void vcpu_wakeup(vcpu_t *vcpu){
-    vcpu->state = VCPU_STATE_WAIT;
-}
-
-*/
-
-
 void vcpu_sleep(vcpu_t *vcpu){
   
   if(vcpu->state != VCPU_STATE_RUN){
-      hyp_panic("This vcpu is not running. So cannot sleep. vm:%s vcpu_id:%d\n",
+    hyp_panic("This VCPU is not running.So you cannot sleep the VCPU; vm:%s vcpu_id:%d\n",
           vcpu->vm->name, vcpu->vcpu_id);
-
+  if(vcpu->state == VCPU_STATE_READY){
+    hyp_panic("You cannot sleep a VCPU which is already sleeping; vm:%s vcpu_id:%d\n",
+        vcpu->vm->name, vcpu->vcpu_id);
       return;
   }
   
   log_info("Sleep vm:%s vcpu_id:%d\n", vcpu->vm->name, vcpu->vcpu_id);
-  
+  if(vcpu->state == VCPU_STATE_RUN){
   emulate_vtimer(vcpu);
-  
+    vcpu->phys_cpu->schedule_is_needed = 1;
+  }else if(vcpu->state == VCPU_STATE_READY)
   vcpu->vm->scheduler->scheduler_remove(vcpu);
     
   if(vcpu->phys_cpu->current_vcpu == vcpu)
@@ -236,7 +209,7 @@ void vcpu_do_vserror(vcpu_t *vcpu){
 void vcpu_do_virq(vcpu_t *vcpu){
   vcpu->vic.virq_pending |= 1;
   
-  if(vcpu->state ==VCPU_STATE_SLEEP)
+  if(vcpu->state == VCPU_STATE_SLEEP)
     vcpu_ready(vcpu);
   /* 
    * TODO:

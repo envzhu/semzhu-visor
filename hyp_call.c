@@ -19,7 +19,7 @@
 
 void hyp_call(vcpu_t *vcpu, uint64_t type){
 
-  log_info("HVC #%#x\n", type);
+  log_debug("HVC #%#x\n", type);
 
   switch(type){
     case HYP_CALL_PUTS:
@@ -28,7 +28,7 @@ void hyp_call(vcpu_t *vcpu, uint64_t type){
       break;
 
     case HYP_CALL_FORCE_SHUTDOWN:
-      log_debug("Force Shutdown this vm\n");
+      log_info("Force Shutdown this VM\n");
       vm_force_shutdown(vcpu->vm);
       break;
 
@@ -46,11 +46,10 @@ void hyp_call(vcpu_t *vcpu, uint64_t type){
       break;
       
     case HYP_CALL_CYCLE_COUNT_STOP: 
-      hyp_panic("CPU execute cycle count : %#x\n", cycle_count_stop());
+      log_info("CPU execute cycle count : %#x\n", cycle_count_stop());
       break;
     
     default:
-      /* TODO : Cause vserror instead of abort */
       log_error("Illegal Hypervisor call : HVC #%#x\n", type);
       vcpu_do_vserror(vcpu);
   }
