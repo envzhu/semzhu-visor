@@ -1,9 +1,10 @@
 *.o
 *.d
 *.asm
+*.readelf
 .vscode/
 -*
 Image*
 linux.img
-orevisor*
+semzhu-visor*
 sampleOS*
